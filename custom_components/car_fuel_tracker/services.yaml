@@ -1,0 +1,155 @@
+log_fillup:
+  name: Log Fillup
+  description: Record a fuel fill-up for a car.
+  fields:
+    car:
+      name: Car
+      description: Car name exactly as configured in Fuel Tracker.
+      required: true
+      example: "Civic"
+      selector:
+        text:
+    odometer:
+      name: Odometer
+      description: Current odometer reading (km).
+      required: true
+      example: 45210
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    volume:
+      name: Volume
+      description: Liters filled.
+      required: true
+      example: 38.5
+      selector:
+        number:
+          min: 0
+          step: 0.01
+          mode: box
+    cost_per_liter:
+      name: Cost per liter
+      description: Price paid per liter.
+      required: true
+      example: 5.89
+      selector:
+        number:
+          min: 0
+          step: 0.001
+          mode: box
+    fuel_grade:
+      name: Fuel grade
+      description: Type of fuel used.
+      required: false
+      example: "regular"
+      selector:
+        select:
+          options:
+            - regular
+            - premium
+            - diesel
+            - ethanol
+            - other
+    full_tank:
+      name: Full tank
+      description: Whether this fill topped the tank all the way (needed for accurate consumption calc).
+      required: false
+      selector:
+        boolean:
+    tire_pressure_checked:
+      name: Tire pressure checked
+      description: Whether tire pressure was checked during this stop.
+      required: false
+      selector:
+        boolean:
+    station_name:
+      name: Station name
+      description: Gas station name/brand.
+      required: false
+      selector:
+        text:
+    latitude:
+      name: Latitude
+      description: Station latitude (usually auto-filled from phone GPS via automation).
+      required: false
+      selector:
+        number:
+          mode: box
+          step: 0.000001
+    longitude:
+      name: Longitude
+      description: Station longitude (usually auto-filled from phone GPS via automation).
+      required: false
+      selector:
+        number:
+          mode: box
+          step: 0.000001
+
+retire_car:
+  name: Retire Car
+  description: >
+    Mark a car as retired (sold/crashed/no longer used). Freezes its data —
+    no further log_fillup or log_service calls will be accepted for this car.
+  fields:
+    car:
+      name: Car
+      description: Car name exactly as configured in Car and Fuel Tracker.
+      required: true
+      selector:
+        text:
+    retirement_reason:
+      name: Retirement reason
+      description: e.g. "sold", "crashed", "traded in".
+      required: false
+      selector:
+        text:
+    final_odometer:
+      name: Final odometer
+      description: Odometer at retirement. Defaults to the last logged fillup's odometer if omitted.
+      required: false
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+
+log_service:
+  name: Log Service
+  description: Record a maintenance/service event for a car (oil, tires, wipers, etc.).
+  fields:
+    car:
+      name: Car
+      description: Car name exactly as configured in Fuel Tracker.
+      required: true
+      selector:
+        text:
+    service_type:
+      name: Service type
+      description: e.g. oil_change, tires, wipers, other.
+      required: true
+      selector:
+        text:
+    cost:
+      name: Cost
+      required: false
+      selector:
+        number:
+          min: 0
+          step: 0.01
+          mode: box
+    odometer:
+      name: Odometer
+      required: false
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    notes:
+      name: Notes
+      required: false
+      selector:
+        text:
+          multiline: true

@@ -1,0 +1,37 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a car to Car and Fuel Tracker",
+        "data": {
+          "car_name": "Car name",
+          "brand": "Brand",
+          "model": "Model",
+          "year": "Year",
+          "color": "Color",
+          "purchase_cost": "Purchase cost",
+          "starting_odometer": "Starting odometer (km)",
+          "default_fuel_grade": "Default fuel grade",
+          "comment": "Comment (free text)",
+          "google_sheets_entry_id": "Google Sheets config entry ID (optional)",
+          "google_sheet_id": "Google Sheet ID (optional)"
+        }
+      }
+    },
+    "error": {
+      "already_configured": "A car with this name is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "default_fuel_grade": "Default fuel grade",
+          "comment": "Comment (free text)",
+          "google_sheets_entry_id": "Google Sheets config entry ID (optional)",
+          "google_sheet_id": "Google Sheet ID (optional)"
+        }
+      }
+    }
+  }
+}
