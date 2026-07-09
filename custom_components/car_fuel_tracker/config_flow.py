@@ -80,7 +80,7 @@ class CarFuelTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
-        return CarFuelTrackerOptionsFlow(config_entry)
+        return CarFuelTrackerOptionsFlow()
 
 
 class CarFuelTrackerOptionsFlow(config_entries.OptionsFlow):
@@ -89,10 +89,11 @@ class CarFuelTrackerOptionsFlow(config_entries.OptionsFlow):
     Note: once a car is retired (see retire_car service), the integration
     treats its data as frozen going forward — this options flow does not
     itself block edits, but retired cars should not be edited.
-    """
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
+    Do NOT set self.config_entry manually here — on current Home Assistant
+    versions it's a read-only property populated by the framework, and
+    assigning to it causes a 500 error when the options flow is opened.
+    """
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
