@@ -119,6 +119,20 @@ retire_car:
           step: 0.1
           mode: box
 
+unretire_car:
+  name: Unretire Car
+  description: >
+    Reverse a car's retired status — makes it active again so log_fillup
+    and log_service can be used for it. The previous retirement details are
+    preserved as an attribute on the car's Status sensor for reference.
+  fields:
+    car:
+      name: Car
+      description: Car name exactly as configured in Car and Fuel Tracker.
+      required: true
+      selector:
+        text:
+
 log_service:
   name: Log Service
   description: Record a maintenance/service event for a car (oil, tires, wipers, etc.).
