@@ -78,20 +78,18 @@ log_fillup:
         text:
     latitude:
       name: Latitude
-      description: Station latitude (usually auto-filled from phone GPS via automation).
+      description: Station latitude (usually auto-filled from phone GPS via automation). Full decimal precision is accepted even though the UI step is coarser.
       required: false
       selector:
         number:
           mode: box
-          step: 0.000001
     longitude:
       name: Longitude
-      description: Station longitude (usually auto-filled from phone GPS via automation).
+      description: Station longitude (usually auto-filled from phone GPS via automation). Full decimal precision is accepted even though the UI step is coarser.
       required: false
       selector:
         number:
           mode: box
-          step: 0.000001
 
 retire_car:
   name: Retire Car
