@@ -19,6 +19,25 @@ CONF_COMMENT = "comment"
 
 FUEL_GRADES = ["regular", "premium", "diesel", "ethanol", "other"]
 
+# Display unit for the Consumption sensor (raw calc is always stored as L/100km internally)
+CONF_CONSUMPTION_UNIT = "consumption_unit"
+CONSUMPTION_UNIT_L_100KM = "l_100km"
+CONSUMPTION_UNIT_KM_PER_L = "km_per_l"
+CONSUMPTION_UNIT_MPG_US = "mpg_us"
+CONSUMPTION_UNIT_MPG_UK = "mpg_uk"
+CONSUMPTION_UNITS = [
+    CONSUMPTION_UNIT_L_100KM,
+    CONSUMPTION_UNIT_KM_PER_L,
+    CONSUMPTION_UNIT_MPG_US,
+    CONSUMPTION_UNIT_MPG_UK,
+]
+CONSUMPTION_UNIT_LABELS = {
+    CONSUMPTION_UNIT_L_100KM: "L/100km",
+    CONSUMPTION_UNIT_KM_PER_L: "km/L",
+    CONSUMPTION_UNIT_MPG_US: "mpg (US)",
+    CONSUMPTION_UNIT_MPG_UK: "mpg (UK)",
+}
+
 # Rolling average windows for cost-per-km
 AVG_WINDOW_10_FILLS = "10_fills"
 AVG_WINDOW_180_DAYS = "180_days"
@@ -42,6 +61,7 @@ ATTR_FUEL_GRADE = "fuel_grade"
 ATTR_FULL_TANK = "full_tank"
 ATTR_TIRE_PRESSURE_CHECKED = "tire_pressure_checked"
 ATTR_STATION_NAME = "station_name"
+ATTR_STATION_BRAND = "station_brand"
 ATTR_LATITUDE = "latitude"
 ATTR_LONGITUDE = "longitude"
 
