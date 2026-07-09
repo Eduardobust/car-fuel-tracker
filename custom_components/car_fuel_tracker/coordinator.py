@@ -1,8 +1,8 @@
 """Data coordinator for a single car in Car and Fuel Tracker.
 
-Beta v0: local Store-based persistence + push-based updates to entities.
-No polling — state changes only when log_fillup / log_service / retire_car
-services run.
+Beta v0.2: adds station brand, expense aggregation sensors, consumption unit
+conversion, and data-integrity validation on log_fillup (odometer rollback,
+zero/negative volume, zero/negative cost_per_liter).
 """
 from __future__ import annotations
 
@@ -25,18 +25,45 @@ from .const import (
     CONF_BRAND,
     CONF_COLOR,
     CONF_COMMENT,
+    CONF_CONSUMPTION_UNIT,
     CONF_GOOGLE_SHEET_ID,
     CONF_GOOGLE_SHEETS_ENTRY_ID,
     CONF_MODEL,
     CONF_PURCHASE_COST,
     CONF_STARTING_ODOMETER,
     CONF_YEAR,
+    CONSUMPTION_UNIT_KM_PER_L,
+    CONSUMPTION_UNIT_L_100KM,
+    CONSUMPTION_UNIT_LABELS,
+    CONSUMPTION_UNIT_MPG_UK,
+    CONSUMPTION_UNIT_MPG_US,
     DOMAIN,
     STORAGE_KEY_FMT,
     STORAGE_VERSION,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Conversion constants (L/100km -> other units)
+_MPG_US_FACTOR = 235.214583
+_MPG_UK_FACTOR = 282.480936
+
+
+def convert_consumption(l_per_100km: float | None, unit: str) -> float | None:
+    """Convert a raw L/100km value to the requested display unit."""
+    if l_per_100km is None:
+        return None
+    if unit == CONSUMPTION_UNIT_L_100KM:
+        return l_per_100km
+    if l_per_100km <= 0:
+        return None
+    if unit == CONSUMPTION_UNIT_KM_PER_L:
+        return round(100 / l_per_100km, 2)
+    if unit == CONSUMPTION_UNIT_MPG_US:
+        return round(_MPG_US_FACTOR / l_per_100km, 2)
+    if unit == CONSUMPTION_UNIT_MPG_UK:
+        return round(_MPG_UK_FACTOR / l_per_100km, 2)
+    return l_per_100km
 
 
 class FuelTrackerCoordinator(DataUpdateCoordinator):
@@ -54,7 +81,6 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
         self._services: list[dict[str, Any]] = []
         self._tire_last_checked: str | None = None
 
-        # Retirement state (persisted; car profile itself comes from entry.data)
         self._status: str = CAR_STATUS_ACTIVE
         self._retired_date: str | None = None
         self._retirement_reason: str | None = None
@@ -89,7 +115,7 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
         )
 
     # ------------------------------------------------------------------ #
-    # Guard
+    # Guards / validation
     # ------------------------------------------------------------------ #
     def _ensure_active(self) -> None:
         if self._status == CAR_STATUS_RETIRED:
@@ -98,6 +124,31 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
                 f"{self._retired_date}. Its data is frozen — no new fillups, "
                 f"services, or further retirement actions are allowed."
             )
+
+    def _validate_fillup(self, odometer: float, volume: float, cost_per_liter: float) -> None:
+        if volume <= 0:
+            raise HomeAssistantError(
+                f"Car Fuel Tracker: volume must be greater than 0 (got {volume})."
+            )
+        if cost_per_liter <= 0:
+            raise HomeAssistantError(
+                f"Car Fuel Tracker: cost_per_liter must be greater than 0 (got {cost_per_liter})."
+            )
+        if self._fills:
+            last_odo = self._fills[-1]["odometer"]
+            if odometer < last_odo:
+                raise HomeAssistantError(
+                    f"Car Fuel Tracker: odometer ({odometer}) is less than the last "
+                    f"recorded odometer ({last_odo}) for '{self.car_name}'. "
+                    f"Odometer cannot go backwards."
+                )
+        else:
+            starting = self.entry.data.get(CONF_STARTING_ODOMETER, 0) or 0
+            if odometer < starting:
+                raise HomeAssistantError(
+                    f"Car Fuel Tracker: odometer ({odometer}) is less than the "
+                    f"starting odometer configured for '{self.car_name}' ({starting})."
+                )
 
     # ------------------------------------------------------------------ #
     # Public API used by services.py handlers
@@ -108,6 +159,8 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
         odometer = float(payload["odometer"])
         volume = float(payload["volume"])
         cost_per_liter = float(payload["cost_per_liter"])
+        self._validate_fillup(odometer, volume, cost_per_liter)
+
         total_cost = round(volume * cost_per_liter, 2)
 
         prev_odometer = self._fills[-1]["odometer"] if self._fills else None
@@ -124,6 +177,7 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
             "full_tank": bool(payload.get("full_tank", False)),
             "tire_pressure_checked": bool(payload.get("tire_pressure_checked", False)),
             "station_name": payload.get("station_name"),
+            "station_brand": payload.get("station_brand"),
             "latitude": payload.get("latitude"),
             "longitude": payload.get("longitude"),
         }
@@ -147,10 +201,16 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
     async def async_log_service(self, payload: dict[str, Any]) -> None:
         self._ensure_active()
 
+        cost = payload.get("cost")
+        if cost is not None and float(cost) < 0:
+            raise HomeAssistantError(
+                f"Car Fuel Tracker: service cost cannot be negative (got {cost})."
+            )
+
         record = {
             "date": dt_util.now().isoformat(),
             "service_type": payload.get("service_type"),
-            "cost": float(payload["cost"]) if payload.get("cost") is not None else None,
+            "cost": float(cost) if cost is not None else None,
             "odometer": float(payload["odometer"]) if payload.get("odometer") is not None else None,
             "notes": payload.get("notes", ""),
         }
@@ -160,7 +220,6 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
         await self._async_push_to_sheets("service", record)
 
     async def async_retire_car(self, payload: dict[str, Any]) -> None:
-        """Freeze the car: no further fillup/service logging after this."""
         self._ensure_active()
 
         self._status = CAR_STATUS_RETIRED
@@ -221,7 +280,7 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
             subset = [
                 f for f in eligible if datetime.fromisoformat(f["date"]) >= cutoff
             ]
-        else:  # lifetime
+        else:
             subset = eligible
 
         if not subset:
@@ -233,6 +292,24 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
             return None
         last = datetime.fromisoformat(self._tire_last_checked)
         return (dt_util.now() - last).days
+
+    def _sum_fuel_cost(self, since: datetime | None = None) -> float:
+        if since is None:
+            return round(sum(f["total_cost"] for f in self._fills), 2)
+        return round(
+            sum(
+                f["total_cost"]
+                for f in self._fills
+                if datetime.fromisoformat(f["date"]) >= since
+            ),
+            2,
+        )
+
+    def _total_volume(self) -> float:
+        return round(sum(f["volume"] for f in self._fills), 2)
+
+    def _total_service_cost(self) -> float:
+        return round(sum(s["cost"] for s in self._services if s.get("cost") is not None), 2)
 
     # ------------------------------------------------------------------ #
     # Sheets sync (best-effort — never blocks local sensors on failure)
@@ -283,9 +360,22 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
             "comment": self.entry.options.get(CONF_COMMENT, data.get(CONF_COMMENT, "")),
         }
 
+    def _consumption_unit(self) -> str:
+        return self.entry.options.get(
+            CONF_CONSUMPTION_UNIT,
+            self.entry.data.get(CONF_CONSUMPTION_UNIT, CONSUMPTION_UNIT_L_100KM),
+        )
+
     def _build_data(self) -> dict[str, Any]:
         last_fill = self._fills[-1] if self._fills else None
         last_service = self._services[-1] if self._services else None
+        now = dt_util.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        unit = self._consumption_unit()
+        raw_l100 = last_fill["l_per_100km"] if last_fill else None
+
         return {
             "car_profile": self._car_profile(),
             "status": self._status,
@@ -294,7 +384,10 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
             "final_odometer": self._final_odometer,
             "last_fillup": last_fill,
             "odometer": last_fill["odometer"] if last_fill else None,
-            "l_per_100km": last_fill["l_per_100km"] if last_fill else None,
+            "l_per_100km_raw": raw_l100,
+            "consumption_unit": unit,
+            "consumption_unit_label": CONSUMPTION_UNIT_LABELS.get(unit, unit),
+            "consumption_display": convert_consumption(raw_l100, unit),
             "cost_per_km_last_fill": last_fill["cost_per_km"] if last_fill else None,
             "cost_per_km_avg_10_fills": self._rolling_avg_cost_per_km(AVG_WINDOW_10_FILLS),
             "cost_per_km_avg_180_days": self._rolling_avg_cost_per_km(AVG_WINDOW_180_DAYS),
@@ -304,4 +397,10 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
             "last_service": last_service,
             "fill_count": len(self._fills),
             "service_count": len(self._services),
+            "total_volume": self._total_volume(),
+            "total_fuel_cost": self._sum_fuel_cost(),
+            "fuel_cost_current_month": self._sum_fuel_cost(since=month_start),
+            "fuel_cost_current_year": self._sum_fuel_cost(since=year_start),
+            "total_service_cost": self._total_service_cost(),
+            "total_expense": round(self._sum_fuel_cost() + self._total_service_cost(), 2),
         }
