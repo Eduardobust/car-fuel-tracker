@@ -13,6 +13,7 @@ from .const import (
     CONF_CAR_NAME,
     CONF_COLOR,
     CONF_COMMENT,
+    CONF_CONSUMPTION_UNIT,
     CONF_DEFAULT_FUEL_GRADE,
     CONF_GOOGLE_SHEET_ID,
     CONF_GOOGLE_SHEETS_ENTRY_ID,
@@ -20,6 +21,8 @@ from .const import (
     CONF_PURCHASE_COST,
     CONF_STARTING_ODOMETER,
     CONF_YEAR,
+    CONSUMPTION_UNIT_L_100KM,
+    CONSUMPTION_UNITS,
     DOMAIN,
     FUEL_GRADES,
 )
@@ -61,6 +64,9 @@ class CarFuelTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_DEFAULT_FUEL_GRADE, default=FUEL_GRADES[0]
                 ): vol.In(FUEL_GRADES),
                 vol.Optional(CONF_COMMENT, default=""): str,
+                vol.Optional(
+                    CONF_CONSUMPTION_UNIT, default=CONSUMPTION_UNIT_L_100KM
+                ): vol.In(CONSUMPTION_UNITS),
                 # Optional: config_entry_id of an already-configured Google Sheets
                 # integration, and the target sheet ID within it. Leave blank to
                 # skip Sheets sync for this car (beta v0 — local sensors only).
@@ -103,6 +109,10 @@ class CarFuelTrackerOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_COMMENT, default=current.get(CONF_COMMENT, "")
                 ): str,
+                vol.Optional(
+                    CONF_CONSUMPTION_UNIT,
+                    default=current.get(CONF_CONSUMPTION_UNIT, CONSUMPTION_UNIT_L_100KM),
+                ): vol.In(CONSUMPTION_UNITS),
                 vol.Optional(
                     CONF_GOOGLE_SHEETS_ENTRY_ID,
                     default=current.get(CONF_GOOGLE_SHEETS_ENTRY_ID, ""),
