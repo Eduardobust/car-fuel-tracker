@@ -104,6 +104,7 @@ class FuelTrackerCarStatusSensor(_BaseFuelTrackerSensor):
             "retired_date": self.coordinator.data.get("retired_date"),
             "retirement_reason": self.coordinator.data.get("retirement_reason"),
             "final_odometer": self.coordinator.data.get("final_odometer"),
+            "previous_retirement": self.coordinator.data.get("previous_retirement"),
         }
 
 
