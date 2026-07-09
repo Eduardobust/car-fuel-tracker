@@ -1,11 +1,11 @@
 {
   "domain": "car_fuel_tracker",
   "name": "Car and Fuel Tracker",
-  "codeowners": ["@eduardo"],
+  "codeowners": ["@Eduardobust"],
   "config_flow": true,
-  "documentation": "https://github.com/YOUR_GITHUB_USER/car_fuel_tracker",
-  "issue_tracker": "https://github.com/YOUR_GITHUB_USER/car_fuel_tracker/issues",
+  "documentation": "https://github.com/Eduardobust/car-fuel-tracker",
+  "issue_tracker": "https://github.com/Eduardobust/car-fuel-tracker/issues",
   "iot_class": "local_push",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "requirements": []
 }
