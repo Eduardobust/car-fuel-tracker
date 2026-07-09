@@ -52,6 +52,7 @@ STORAGE_KEY_FMT = "fuel_tracker_{entry_id}"
 SERVICE_LOG_FILLUP = "log_fillup"
 SERVICE_LOG_SERVICE = "log_service"
 SERVICE_RETIRE_CAR = "retire_car"
+SERVICE_UNRETIRE_CAR = "unretire_car"
 
 ATTR_CAR = "car"
 ATTR_ODOMETER = "odometer"
