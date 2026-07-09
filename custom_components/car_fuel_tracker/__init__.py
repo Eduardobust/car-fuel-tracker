@@ -20,6 +20,7 @@ from .const import (
     ATTR_ODOMETER,
     ATTR_RETIREMENT_REASON,
     ATTR_SERVICE_TYPE,
+    ATTR_STATION_BRAND,
     ATTR_STATION_NAME,
     ATTR_TIRE_PRESSURE_CHECKED,
     ATTR_VOLUME,
@@ -43,6 +44,7 @@ LOG_FILLUP_SCHEMA = vol.Schema(
         vol.Optional(ATTR_FULL_TANK, default=False): cv.boolean,
         vol.Optional(ATTR_TIRE_PRESSURE_CHECKED, default=False): cv.boolean,
         vol.Optional(ATTR_STATION_NAME): cv.string,
+        vol.Optional(ATTR_STATION_BRAND): cv.string,
         vol.Optional(ATTR_LATITUDE): vol.Coerce(float),
         vol.Optional(ATTR_LONGITUDE): vol.Coerce(float),
     }
