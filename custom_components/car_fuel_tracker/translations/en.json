@@ -31,7 +31,16 @@
           "comment": "Comment (free text)",
           "google_sheets_entry_id": "Google Sheets config entry ID (optional)",
           "google_sheet_id": "Google Sheet ID (optional)",
-          "consumption_unit": "Consumption display unit"
+          "consumption_unit": "Consumption display unit",
+          "retired": "Retired? (car sold/crashed/no longer used)"
+        }
+      },
+      "retire_details": {
+        "title": "Retirement details",
+        "description": "Provide a reason and/or final odometer reading for this retirement.",
+        "data": {
+          "retirement_reason": "Retirement reason",
+          "final_odometer": "Final odometer"
         }
       }
     }
