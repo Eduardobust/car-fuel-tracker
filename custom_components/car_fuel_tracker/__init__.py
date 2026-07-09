@@ -29,6 +29,7 @@ from .const import (
     SERVICE_LOG_FILLUP,
     SERVICE_LOG_SERVICE,
     SERVICE_RETIRE_CAR,
+    SERVICE_UNRETIRE_CAR,
 )
 from .coordinator import FuelTrackerCoordinator
 
@@ -68,6 +69,12 @@ RETIRE_CAR_SCHEMA = vol.Schema(
     }
 )
 
+UNRETIRE_CAR_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_CAR): cv.string,
+    }
+)
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
@@ -89,6 +96,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async def _handle_retire_car(call: ServiceCall) -> None:
             await _dispatch_to_car(hass, call.data[ATTR_CAR], "async_retire_car", call.data)
 
+        async def _handle_unretire_car(call: ServiceCall) -> None:
+            await _dispatch_to_car(hass, call.data[ATTR_CAR], "async_unretire_car", call.data)
+
         hass.services.async_register(
             DOMAIN, SERVICE_LOG_FILLUP, _handle_log_fillup, schema=LOG_FILLUP_SCHEMA
         )
@@ -97,6 +107,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         hass.services.async_register(
             DOMAIN, SERVICE_RETIRE_CAR, _handle_retire_car, schema=RETIRE_CAR_SCHEMA
+        )
+        hass.services.async_register(
+            DOMAIN, SERVICE_UNRETIRE_CAR, _handle_unretire_car, schema=UNRETIRE_CAR_SCHEMA
         )
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
