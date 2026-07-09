@@ -85,6 +85,11 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
         self._retired_date: str | None = None
         self._retirement_reason: str | None = None
         self._final_odometer: float | None = None
+        self._previous_retirement: dict[str, Any] | None = None
+
+    @property
+    def status(self) -> str:
+        return self._status
 
     # ------------------------------------------------------------------ #
     # Persistence
@@ -99,6 +104,7 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
             self._retired_date = stored.get("retired_date")
             self._retirement_reason = stored.get("retirement_reason")
             self._final_odometer = stored.get("final_odometer")
+            self._previous_retirement = stored.get("previous_retirement")
         self.async_set_updated_data(self._build_data())
 
     async def _async_save(self) -> None:
@@ -111,6 +117,7 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
                 "retired_date": self._retired_date,
                 "retirement_reason": self._retirement_reason,
                 "final_odometer": self._final_odometer,
+                "previous_retirement": self._previous_retirement,
             }
         )
 
@@ -242,6 +249,28 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
                 "final_odometer": self._final_odometer,
             },
         )
+
+    async def async_unretire_car(self, payload: dict[str, Any] | None = None) -> None:
+        """Reverse a retirement — car becomes active again, free to log fillups/services."""
+        if self._status != CAR_STATUS_RETIRED:
+            raise HomeAssistantError(
+                f"Car Fuel Tracker: '{self.car_name}' is not currently retired — nothing to undo."
+            )
+
+        self._previous_retirement = {
+            "retired_date": self._retired_date,
+            "retirement_reason": self._retirement_reason,
+            "final_odometer": self._final_odometer,
+            "unretired_date": dt_util.now().isoformat(),
+        }
+        self._status = CAR_STATUS_ACTIVE
+        self._retired_date = None
+        self._retirement_reason = None
+        self._final_odometer = None
+
+        await self._async_save()
+        self.async_set_updated_data(self._build_data())
+        await self._async_push_to_sheets("retirement", {**self._previous_retirement, "action": "unretired"})
 
     # ------------------------------------------------------------------ #
     # Calculations
@@ -382,6 +411,7 @@ class FuelTrackerCoordinator(DataUpdateCoordinator):
             "retired_date": self._retired_date,
             "retirement_reason": self._retirement_reason,
             "final_odometer": self._final_odometer,
+            "previous_retirement": self._previous_retirement,
             "last_fillup": last_fill,
             "odometer": last_fill["odometer"] if last_fill else None,
             "l_per_100km_raw": raw_l100,
