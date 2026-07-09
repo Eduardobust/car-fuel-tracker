@@ -14,7 +14,8 @@
           "default_fuel_grade": "Default fuel grade",
           "comment": "Comment (free text)",
           "google_sheets_entry_id": "Google Sheets config entry ID (optional)",
-          "google_sheet_id": "Google Sheet ID (optional)"
+          "google_sheet_id": "Google Sheet ID (optional)",
+          "consumption_unit": "Consumption display unit"
         }
       }
     },
@@ -29,7 +30,8 @@
           "default_fuel_grade": "Default fuel grade",
           "comment": "Comment (free text)",
           "google_sheets_entry_id": "Google Sheets config entry ID (optional)",
-          "google_sheet_id": "Google Sheet ID (optional)"
+          "google_sheet_id": "Google Sheet ID (optional)",
+          "consumption_unit": "Consumption display unit"
         }
       }
     }
