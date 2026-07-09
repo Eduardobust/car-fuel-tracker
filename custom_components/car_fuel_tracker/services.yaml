@@ -66,7 +66,13 @@ log_fillup:
         boolean:
     station_name:
       name: Station name
-      description: Gas station name/brand.
+      description: Gas station name/address (e.g. what's stamped on the receipt or nearest cross-street).
+      required: false
+      selector:
+        text:
+    station_brand:
+      name: Station brand / flag
+      description: The chain/flag of the gas station (e.g. Shell, Ipiranga, Petrobras, BR, Chevron).
       required: false
       selector:
         text:
