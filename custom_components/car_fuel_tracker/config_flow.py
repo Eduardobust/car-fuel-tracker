@@ -9,6 +9,7 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 
 from .const import (
+    CAR_STATUS_RETIRED,
     CONF_BRAND,
     CONF_CAR_NAME,
     CONF_COLOR,
@@ -84,20 +85,38 @@ class CarFuelTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class CarFuelTrackerOptionsFlow(config_entries.OptionsFlow):
-    """Allow editing Sheets linkage / default fuel grade / comment after setup.
+    """Edit Sheets linkage / fuel grade / comment / consumption unit, and
+    retire or un-retire the car via a checkbox.
 
-    Note: once a car is retired (see retire_car service), the integration
-    treats its data as frozen going forward — this options flow does not
-    itself block edits, but retired cars should not be edited.
+    HA forms can't show/hide fields live based on another field in the same
+    screen, so this is implemented as two steps: check "Retired?" and submit
+    -> if newly retiring, a second screen asks for the justification fields.
+    Unmarking it (un-retiring) needs no second screen.
 
-    Do NOT set self.config_entry manually here — on current Home Assistant
-    versions it's a read-only property populated by the framework, and
-    assigning to it causes a 500 error when the options flow is opened.
+    Do NOT set self.config_entry manually — on current Home Assistant
+    versions it's a read-only property populated by the framework.
     """
 
+    def __init__(self) -> None:
+        self._pending_options: dict | None = None
+
     async def async_step_init(self, user_input=None):
+        coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
+        currently_retired = coordinator.status == CAR_STATUS_RETIRED
+
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            retired_requested = user_input.pop("retired", False)
+            self._pending_options = user_input
+
+            if retired_requested and not currently_retired:
+                # Newly retiring -> ask for justification on a second screen
+                return await self.async_step_retire_details()
+
+            if not retired_requested and currently_retired:
+                # Un-retiring -> no extra fields needed
+                await coordinator.async_unretire_car({})
+
+            return self.async_create_entry(title="", data=self._pending_options)
 
         current = {**self.config_entry.data, **self.config_entry.options}
 
@@ -122,6 +141,26 @@ class CarFuelTrackerOptionsFlow(config_entries.OptionsFlow):
                     CONF_GOOGLE_SHEET_ID,
                     default=current.get(CONF_GOOGLE_SHEET_ID, ""),
                 ): str,
+                vol.Optional("retired", default=currently_retired): bool,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)
+
+    async def async_step_retire_details(self, user_input=None):
+        if user_input is not None:
+            coordinator = self.hass.data[DOMAIN][self.config_entry.entry_id]
+            await coordinator.async_retire_car(
+                {
+                    "retirement_reason": user_input.get("retirement_reason", ""),
+                    "final_odometer": user_input.get("final_odometer"),
+                }
+            )
+            return self.async_create_entry(title="", data=self._pending_options or {})
+
+        schema = vol.Schema(
+            {
+                vol.Optional("retirement_reason", default=""): str,
+                vol.Optional("final_odometer"): vol.Coerce(float),
+            }
+        )
+        return self.async_show_form(step_id="retire_details", data_schema=schema)
